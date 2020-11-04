@@ -6,7 +6,15 @@ using namespace std;
 
 const int INPUT_SIZE = 256;
 
-void read_input(int dest[][INPUT_SIZE], char* file) {
+void nearest_neighbor(int in[][INPUT_SIZE], int out[][INPUT_SIZE*2]) {
+    for (int i = 0; i < INPUT_SIZE * 2; i++) {
+        for (int j = 0; j < INPUT_SIZE * 2; j++) {
+            out[i][j] = in[i/2][j/2];
+        }
+    }
+}
+
+void read_from_file(int dest[][INPUT_SIZE], char* file) {
     ifstream inf;
     inf.open(file);
 
@@ -20,14 +28,6 @@ void read_input(int dest[][INPUT_SIZE], char* file) {
     }
 
     inf.close();
-}
-
-void nearest_neighbor(int in[][INPUT_SIZE], int out[][INPUT_SIZE*2]) {
-    for (int i = 0; i < INPUT_SIZE * 2; i++) {
-        for (int j = 0; j < INPUT_SIZE * 2; j++) {
-            out[i][j] = in[i/2][j/2];
-        }
-    }
 }
 
 void output_to_file(int out[][INPUT_SIZE*2], char* file) {
@@ -45,15 +45,17 @@ void output_to_file(int out[][INPUT_SIZE*2], char* file) {
 }
 
 int main(int argc, char** argv) {
-    if (argc != 3) {
-        cerr << "Wrong number of arguments, expected 2" << endl;
+    if (argc == 1) {
+
+    } else if (argc == 3) {
+        int input[INPUT_SIZE][INPUT_SIZE];
+        read_from_file(input, argv[1]);
+
+        int output[INPUT_SIZE*2][INPUT_SIZE*2];
+        nearest_neighbor(input, output);
+        output_to_file(output, argv[2]);
+    } else {
+        cerr << "Wrong number of arguments, expected 0 or 2" << endl;
         return(1);
     }
-
-    int input[INPUT_SIZE][INPUT_SIZE];
-    read_input(input, argv[1]);
-
-    int output[INPUT_SIZE*2][INPUT_SIZE*2];
-    nearest_neighbor(input, output);
-    output_to_file(output, argv[2]);
 }
