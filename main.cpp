@@ -11,6 +11,7 @@
 #include <fstream>
 #include <string>
 #include <sstream>
+#include <math.h>
 using namespace std;
 
 const int INPUT_SIZE = 256;
@@ -37,17 +38,20 @@ void nearest_neighbor(int in[][INPUT_SIZE], int out[][INPUT_SIZE*2]) {
 }
 
 /*
+    Linear and Bilinear interpolation functions.
+*/
+
+double lerp(double p0, double p1, double k) {
+    return p0 + (p1 - p0) * k;
+}
+
+double blerp(double p00, double p10, double p01, double p11, double kx, double ky) {
+    return lerp (lerp(p00, p10, kx), lerp(p01, p11, kx), ky);
+}
+
+/*
     Bilinear upscaling.
-    Uses linear interpolation to fill in missing pixels in
-    output image.
-
-        a b  ->   a _ _ b
-        c d       _ _ _ _
-                  _ _ _ _
-                  c _ _ d
-
-    Every 2x2 matrix in the original image is turned into a
-    4x4 matrix on the output image.
+    Uses linear interpolation to calculate the output image.
 
     This implementation is O(n), where n is the number of pixels in the 
     original image (INPUT_SIZE^2).
@@ -56,44 +60,47 @@ void nearest_neighbor(int in[][INPUT_SIZE], int out[][INPUT_SIZE*2]) {
     @param out the output image.
 */
 void bilinear(int in[][INPUT_SIZE], int out[][INPUT_SIZE*2]) {
-    // perform linear interpolation in every known row
-    for (int i = 0; i < INPUT_SIZE / 2; i++) {
-        for (int j = 0; j < INPUT_SIZE / 2; j++) {
-            for (int k = 0; k < 4; k++) {
-                out[i*4][j*4+k] = in[i*2][j*2] + (in[i*2][j*2+1] - in[i*2][j*2]) * k / 3;
-                out[i*4+3][j*4+k] = in[i*2+1][j*2] + (in[i*2+1][j*2+1] - in[i*2+1][j*2]) * k / 3;
-            }
-        }
-    }
+    for(int y = 0; y < INPUT_SIZE * 2; y++) {
+        for (int x = 0; x < INPUT_SIZE * 2; x++) {
+            double gx = (x - 0.5) * 0.5;
+            double gy = (y - 0.5) * 0.5;
+            int gxi[2] = {max((int)gx, 0), min((int)gx + 1, INPUT_SIZE)};
+            int gyi[2] = {max((int)gy, 0), min((int)gy + 1, INPUT_SIZE)};
 
-    // perform linear interpolation in every column
-    for (int j = 0; j < INPUT_SIZE * 2; j++) {
-        for (int i = 0; i < INPUT_SIZE / 2; i++) {
-            for (int k = 0; k < 4; k++) {
-                out[i*4+k][j] = out[i*4][j] + (out[i*4+3][j] - out[i*4][j]) * k / 3;
-            }
+            int c00 = in[gyi[0]][gxi[0]];
+            int c10 = in[gyi[0]][gxi[1]];
+            int c01 = in[gyi[1]][gxi[0]];
+            int c11 = in[gyi[1]][gxi[1]];
+
+            out[y][x] = blerp(c00, c10, c01, c11, gx - (int)gx, gy - (int)gy);
         }
     }
 }
 
 /*
+    Cubic and bicubic interpolation functions.
+*/
+double cerp(double p0, double p1, double p2, double p3, double k) {
+    double a = -0.5 * p0 + 1.5 * p1 + -1.5 * p2 + 0.5 * p3;
+    double b = p0 + -2.5 * p1 + 2 * p2 + -0.5 * p3;
+    double c = -0.5 * p0 + 0.5 * p2;
+    return a * pow(k, 3) + b * pow(k, 2) + c * k + p1;
+}
+double bcerp(double p00, double p01, double p02, double p03, 
+            double p10, double p11, double p12, double p13, 
+            double p20, double p21, double p22, double p23, 
+            double p30, double p31, double p32, double p33, 
+            double kx, double ky) {
+    return cerp ( cerp (p00, p01, p02, p03, ky),
+                  cerp (p10, p11, p12, p13, ky),
+                  cerp (p20, p21, p22, p23, ky),
+                  cerp (p30, p31, p32, p33, ky),
+                  kx );
+}
+
+/*
     Bicubic upscaling.
-    Uses cubic interpolation to fill in missing pixels in
-    output image.
-
-        a b c d ->   a _ _ b _ _ c _ _ d
-        e f g h      _ _ _ _ _ _ _ _ _ _
-        i j k l      _ _ _ _ _ _ _ _ _ _
-        m n o p      e _ _ f _ _ g _ _ h
-                     _ _ _ _ _ _ _ _ _ _
-                     _ _ _ _ _ _ _ _ _ _
-                     i _ _ j _ _ k _ _ l
-                     _ _ _ _ _ _ _ _ _ _
-                     _ _ _ _ _ _ _ _ _ _
-                     m _ _ n _ _ o _ _ p
-
-    Every 4x4 matrix in the original image is turned into a
-    10x10 matrix on the output image.
+    Uses cubic interpolation to calculate the output image.
 
     This implementation is O(n), where n is the number of pixels in the 
     original image (INPUT_SIZE^2).
@@ -102,25 +109,35 @@ void bilinear(int in[][INPUT_SIZE], int out[][INPUT_SIZE*2]) {
     @param out the output image.
 */
 void bicubic(int in[][INPUT_SIZE], int out[][INPUT_SIZE*2]) {
-    for (int i = 0; i < INPUT_SIZE / 4; i++) {
-        for (int j = 0; j < INPUT_SIZE / 4; j++) {
-            // fill in known pixels a-p
-            out[i*10][j*10] = in[i*4][j*4];
-            out[i*10+3][j*10] = in[i*4+1][j*4];
-            out[i*10+6][j*10] = in[i*4+2][j*4];
-            out[i*10+9][j*10] = in[i*4+3][j*4];
-            out[i*10][j*10+3] = in[i*4][j*4+1];
-            out[i*10+3][j*10+3] = in[i*4+1][j*4+1];
-            out[i*10+6][j*10+3] = in[i*4+2][j*4+1];
-            out[i*10+9][j*10+3] = in[i*4+3][j*4+1];
-            out[i*10][j*10+6] = in[i*4][j*4+2];
-            out[i*10+3][j*10+6] = in[i*4+1][j*4+2];
-            out[i*10+6][j*10+6] = in[i*4+2][j*4+2];
-            out[i*10+9][j*10+6] = in[i*4+3][j*4+2];
-            out[i*10][j*10+9] = in[i*4][j*4+3];
-            out[i*10+3][j*10+9] = in[i*4+1][j*4+3];
-            out[i*10+6][j*10+9] = in[i*4+2][j*4+3];
-            out[i*10+9][j*10+9] = in[i*4+3][j*4+3];
+    for (int x = 0; x < INPUT_SIZE * 2; x++) {
+        for (int y = 0; y < INPUT_SIZE * 2; y++) {
+            double gx = (x - 0.5) * 0.5;
+            double gy = (y - 0.5) * 0.5;
+            int gxi = (int)gx;
+            int gyi = (int)gy;
+
+            int c00 = in[max(gyi-1, 0)][max(gxi-1, 0)];
+            int c01 = in[gyi][max(gxi-1, 0)];
+            int c02 = in[min(gyi+1, INPUT_SIZE)][max(gxi-1, 0)];
+            int c03 = in[min(gyi+2, INPUT_SIZE)][max(gxi-1, 0)];
+            int c10 = in[max(gyi-1, 0)][gxi];
+            int c11 = in[gyi][gxi];
+            int c12 = in[min(gyi+1, INPUT_SIZE)][gxi];
+            int c13 = in[min(gyi+2, INPUT_SIZE)][gxi];
+            int c20 = in[max(gyi-1, 0)][min(gxi+1, INPUT_SIZE)];
+            int c21 = in[gyi][min(gxi+1, INPUT_SIZE)];
+            int c22 = in[min(gyi+1, INPUT_SIZE)][min(gxi+1, INPUT_SIZE)];
+            int c23 = in[min(gyi+2, INPUT_SIZE)][min(gxi+1, INPUT_SIZE)];
+            int c30 = in[max(gyi-1, 0)][min(gxi+2, INPUT_SIZE)];
+            int c31 = in[gyi][min(gxi+2, INPUT_SIZE)];
+            int c32 = in[min(gyi+1, INPUT_SIZE)][min(gxi+2, INPUT_SIZE)];
+            int c33 = in[min(gyi+2, INPUT_SIZE)][min(gxi+2, INPUT_SIZE)];
+
+            out[y][x] = bcerp (c00, c01, c02, c03,
+                               c10, c11, c12, c13,
+                               c20, c21, c22, c23,
+                               c30, c31, c32, c33,
+                               gx - gxi, gy - gyi);
         }
     }
 }
@@ -181,7 +198,6 @@ bool output_to_file(int out[][INPUT_SIZE*2], char* file) {
 
     Otherwise if the program is executed with two arguments, read in
     image information from argument one and output an upscaled image
-    to argument two, using the upscaling algorithm that is expected to
     be most performant.
 */
 int main(int argc, char** argv) {
@@ -192,7 +208,7 @@ int main(int argc, char** argv) {
         read_from_file(input, argv[1]);
 
         int output[INPUT_SIZE*2][INPUT_SIZE*2];
-        bilinear(input, output); // expected to produce best results
+        bicubic(input, output); // expected to produce best results
         output_to_file(output, argv[2]);
     } else {
         cerr << "Wrong number of arguments, expected 0 or 2" << endl;
