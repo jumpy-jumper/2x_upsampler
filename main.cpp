@@ -29,16 +29,16 @@ const int INPUT_SIZE = 256;
 void nearest_neighbor(int in[][INPUT_SIZE], int out[][INPUT_SIZE*2]) {
     for (int i = 0; i < INPUT_SIZE; i++) {
         for (int j = 0; j < INPUT_SIZE; j++) {
-            out[i][j] = in[i][j];
-            out[i+1][j] = in[i][j];
-            out[i][j+1] = in[i][j];
-            out[i+1][j+1] = in[i][j];
+            out[i*2][j*2] = in[i][j];
+            out[i*2+1][j*2] = in[i][j];
+            out[i*2][j*2+1] = in[i][j];
+            out[i*2+1][j*2+1] = in[i][j];
         }
     }
 }
 
 /*
-    Linear and Bilinear interpolation functions.
+    Linear and bilinear interpolation functions.
 */
 
 double lerp(double p0, double p1, double k) {
@@ -64,8 +64,8 @@ void bilinear(int in[][INPUT_SIZE], int out[][INPUT_SIZE*2]) {
         for (int x = 0; x < INPUT_SIZE * 2; x++) {
             double gx = (x - 0.5) * 0.5;
             double gy = (y - 0.5) * 0.5;
-            int gxi[2] = {max((int)gx, 0), min((int)gx + 1, INPUT_SIZE)};
-            int gyi[2] = {max((int)gy, 0), min((int)gy + 1, INPUT_SIZE)};
+            int gxi[2] = {max((int)gx, 0), min((int)gx + 1, INPUT_SIZE - 1)};
+            int gyi[2] = {max((int)gy, 0), min((int)gy + 1, INPUT_SIZE - 1)};
 
             int c00 = in[gyi[0]][gxi[0]];
             int c10 = in[gyi[0]][gxi[1]];
@@ -80,12 +80,14 @@ void bilinear(int in[][INPUT_SIZE], int out[][INPUT_SIZE*2]) {
 /*
     Cubic and bicubic interpolation functions.
 */
+
 double cerp(double p0, double p1, double p2, double p3, double k) {
     double a = -0.5 * p0 + 1.5 * p1 + -1.5 * p2 + 0.5 * p3;
     double b = p0 + -2.5 * p1 + 2 * p2 + -0.5 * p3;
     double c = -0.5 * p0 + 0.5 * p2;
     return a * pow(k, 3) + b * pow(k, 2) + c * k + p1;
 }
+
 double bcerp(double p00, double p01, double p02, double p03, 
             double p10, double p11, double p12, double p13, 
             double p20, double p21, double p22, double p23, 
@@ -118,20 +120,20 @@ void bicubic(int in[][INPUT_SIZE], int out[][INPUT_SIZE*2]) {
 
             int c00 = in[max(gyi-1, 0)][max(gxi-1, 0)];
             int c01 = in[gyi][max(gxi-1, 0)];
-            int c02 = in[min(gyi+1, INPUT_SIZE)][max(gxi-1, 0)];
-            int c03 = in[min(gyi+2, INPUT_SIZE)][max(gxi-1, 0)];
+            int c02 = in[min(gyi+1, INPUT_SIZE - 1)][max(gxi-1, 0)];
+            int c03 = in[min(gyi+2, INPUT_SIZE - 1)][max(gxi-1, 0)];
             int c10 = in[max(gyi-1, 0)][gxi];
             int c11 = in[gyi][gxi];
-            int c12 = in[min(gyi+1, INPUT_SIZE)][gxi];
-            int c13 = in[min(gyi+2, INPUT_SIZE)][gxi];
-            int c20 = in[max(gyi-1, 0)][min(gxi+1, INPUT_SIZE)];
-            int c21 = in[gyi][min(gxi+1, INPUT_SIZE)];
-            int c22 = in[min(gyi+1, INPUT_SIZE)][min(gxi+1, INPUT_SIZE)];
-            int c23 = in[min(gyi+2, INPUT_SIZE)][min(gxi+1, INPUT_SIZE)];
-            int c30 = in[max(gyi-1, 0)][min(gxi+2, INPUT_SIZE)];
-            int c31 = in[gyi][min(gxi+2, INPUT_SIZE)];
-            int c32 = in[min(gyi+1, INPUT_SIZE)][min(gxi+2, INPUT_SIZE)];
-            int c33 = in[min(gyi+2, INPUT_SIZE)][min(gxi+2, INPUT_SIZE)];
+            int c12 = in[min(gyi+1, INPUT_SIZE - 1)][gxi];
+            int c13 = in[min(gyi+2, INPUT_SIZE - 1)][gxi];
+            int c20 = in[max(gyi-1, 0)][min(gxi+1, INPUT_SIZE - 1)];
+            int c21 = in[gyi][min(gxi+1, INPUT_SIZE - 1)];
+            int c22 = in[min(gyi+1, INPUT_SIZE - 1)][min(gxi+1, INPUT_SIZE - 1)];
+            int c23 = in[min(gyi+2, INPUT_SIZE - 1)][min(gxi+1, INPUT_SIZE - 1)];
+            int c30 = in[max(gyi-1, 0)][min(gxi+2, INPUT_SIZE - 1)];
+            int c31 = in[gyi][min(gxi+2, INPUT_SIZE - 1)];
+            int c32 = in[min(gyi+1, INPUT_SIZE - 1)][min(gxi+2, INPUT_SIZE - 1)];
+            int c33 = in[min(gyi+2, INPUT_SIZE - 1)][min(gxi+2, INPUT_SIZE - 1)];
 
             out[y][x] = bcerp (c00, c01, c02, c03,
                                c10, c11, c12, c13,
@@ -208,8 +210,12 @@ int main(int argc, char** argv) {
         read_from_file(input, argv[1]);
 
         int output[INPUT_SIZE*2][INPUT_SIZE*2];
-        bicubic(input, output); // expected to produce best results
-        output_to_file(output, argv[2]);
+        nearest_neighbor(input, output);
+        output_to_file(output, (char*)"out_nn");
+        bilinear(input, output);
+        output_to_file(output, (char*)"out_bilinear");
+        bicubic(input, output);
+        output_to_file(output, (char*)"out_bicubic");
     } else {
         cerr << "Wrong number of arguments, expected 0 or 2" << endl;
         return(1);
