@@ -4,17 +4,17 @@
     Professor: Piyush Kumar.
 
     This file implements various upscaling algorithms.
+    The implementations assume a scaling factor of 2x.
     ====================================================================
 */
 
 #include <iostream>
 #include <fstream>
+#include <vector>
 #include <string>
 #include <sstream>
 #include <math.h>
 using namespace std;
-
-const int INPUT_SIZE = 256;
 
 /*
     Nearest Neighbor is the simplest upscaling algorithm.
@@ -26,9 +26,11 @@ const int INPUT_SIZE = 256;
     @param in the input image.
     @param out the output image.
 */
-void nearest_neighbor(int in[][INPUT_SIZE], int out[][INPUT_SIZE*2]) {
-    for (int i = 0; i < INPUT_SIZE; i++) {
-        for (int j = 0; j < INPUT_SIZE; j++) {
+void nearest_neighbor(vector<vector<int> >& in, vector<vector<int> >& out) {
+    int w = in.size();
+    int h = in[0].size();
+    for (int i = 0; i < w; i++) {
+        for (int j = 0; j < h; j++) {
             out[i*2][j*2] = in[i][j];
             out[i*2+1][j*2] = in[i][j];
             out[i*2][j*2+1] = in[i][j];
@@ -59,13 +61,15 @@ double blerp(double p00, double p10, double p01, double p11, double kx, double k
     @param in the input image.
     @param out the output image.
 */
-void bilinear(int in[][INPUT_SIZE], int out[][INPUT_SIZE*2]) {
-    for(int y = 0; y < INPUT_SIZE * 2; y++) {
-        for (int x = 0; x < INPUT_SIZE * 2; x++) {
+void bilinear(vector<vector<int> >& in, vector<vector<int> >& out) {
+    int w = in.size();
+    int h = in[0].size();
+    for(int y = 0; y < w * 2; y++) {
+        for (int x = 0; x < h * 2; x++) {
             double gx = (x - 0.5) * 0.5;
             double gy = (y - 0.5) * 0.5;
-            int gxi[2] = {max((int)gx, 0), min((int)gx + 1, INPUT_SIZE - 1)};
-            int gyi[2] = {max((int)gy, 0), min((int)gy + 1, INPUT_SIZE - 1)};
+            int gxi[2] = {max((int)gx, 0), min((int)gx + 1, h - 1)};
+            int gyi[2] = {max((int)gy, 0), min((int)gy + 1, w - 1)};
 
             int c00 = in[gyi[0]][gxi[0]];
             int c10 = in[gyi[0]][gxi[1]];
@@ -110,9 +114,11 @@ double bcerp(double p00, double p01, double p02, double p03,
     @param in the input image.
     @param out the output image.
 */
-void bicubic(int in[][INPUT_SIZE], int out[][INPUT_SIZE*2]) {
-    for (int x = 0; x < INPUT_SIZE * 2; x++) {
-        for (int y = 0; y < INPUT_SIZE * 2; y++) {
+void bicubic(vector<vector<int> >& in, vector<vector<int> >& out) {
+    int w = in.size();
+    int h = in[0].size();
+    for (int y = 0; y < w * 2; y++) {
+        for (int x = 0; x < h * 2; x++) {
             double gx = (x - 0.5) * 0.5;
             double gy = (y - 0.5) * 0.5;
             int gxi = (int)gx;
@@ -120,20 +126,20 @@ void bicubic(int in[][INPUT_SIZE], int out[][INPUT_SIZE*2]) {
 
             int c00 = in[max(gyi-1, 0)][max(gxi-1, 0)];
             int c01 = in[gyi][max(gxi-1, 0)];
-            int c02 = in[min(gyi+1, INPUT_SIZE - 1)][max(gxi-1, 0)];
-            int c03 = in[min(gyi+2, INPUT_SIZE - 1)][max(gxi-1, 0)];
+            int c02 = in[min(gyi+1, w - 1)][max(gxi-1, 0)];
+            int c03 = in[min(gyi+2, w - 1)][max(gxi-1, 0)];
             int c10 = in[max(gyi-1, 0)][gxi];
             int c11 = in[gyi][gxi];
-            int c12 = in[min(gyi+1, INPUT_SIZE - 1)][gxi];
-            int c13 = in[min(gyi+2, INPUT_SIZE - 1)][gxi];
-            int c20 = in[max(gyi-1, 0)][min(gxi+1, INPUT_SIZE - 1)];
-            int c21 = in[gyi][min(gxi+1, INPUT_SIZE - 1)];
-            int c22 = in[min(gyi+1, INPUT_SIZE - 1)][min(gxi+1, INPUT_SIZE - 1)];
-            int c23 = in[min(gyi+2, INPUT_SIZE - 1)][min(gxi+1, INPUT_SIZE - 1)];
-            int c30 = in[max(gyi-1, 0)][min(gxi+2, INPUT_SIZE - 1)];
-            int c31 = in[gyi][min(gxi+2, INPUT_SIZE - 1)];
-            int c32 = in[min(gyi+1, INPUT_SIZE - 1)][min(gxi+2, INPUT_SIZE - 1)];
-            int c33 = in[min(gyi+2, INPUT_SIZE - 1)][min(gxi+2, INPUT_SIZE - 1)];
+            int c12 = in[min(gyi+1, w - 1)][gxi];
+            int c13 = in[min(gyi+2, w - 1)][gxi];
+            int c20 = in[max(gyi-1, 0)][min(gxi+1, h - 1)];
+            int c21 = in[gyi][min(gxi+1, h - 1)];
+            int c22 = in[min(gyi+1, w - 1)][min(gxi+1, h - 1)];
+            int c23 = in[min(gyi+2, w - 1)][min(gxi+1, h - 1)];
+            int c30 = in[max(gyi-1, 0)][min(gxi+2, h - 1)];
+            int c31 = in[gyi][min(gxi+2, h - 1)];
+            int c32 = in[min(gyi+1, w - 1)][min(gxi+2, h - 1)];
+            int c33 = in[min(gyi+2, w - 1)][min(gxi+2, h - 1)];
 
             out[y][x] = bcerp (c00, c01, c02, c03,
                                c10, c11, c12, c13,
@@ -153,17 +159,21 @@ void bicubic(int in[][INPUT_SIZE], int out[][INPUT_SIZE*2]) {
     @param dest 2D int array to copy image to.
     @param file path to file.
 */
-bool read_from_file(int dest[][INPUT_SIZE], char* file) {
+bool read_from_file(vector<vector<int> >& dest, char* file) {
     ifstream inf;
     inf.open(file);
 
     string line;
     for (int i = 0; getline(inf, line); i++) {
+        vector<int> row;
         istringstream iss(line);
         string item;
         for (int j = 0; getline(iss, item, ','); j++) {
-            istringstream(item) >> dest[i][j];
+            int val;
+            istringstream(item) >> val;
+            row.push_back(val);
         }
+        dest.push_back(row);
     }
 
     inf.close();
@@ -179,12 +189,12 @@ bool read_from_file(int dest[][INPUT_SIZE], char* file) {
     @param out 2D int array containing image to output.
     @param file path to file.
 */
-bool output_to_file(int out[][INPUT_SIZE*2], char* file) {
+bool output_to_file(vector<vector<int> >& out, char* file) {
     ofstream outf;
     outf.open(file);
 
-    for (int i = 0; i < INPUT_SIZE * 2; i++) {
-        for (int j = 0; j < INPUT_SIZE * 2; j++) {
+    for (int i = 0; i < out.size(); i++) {
+        for (int j = 0; j < out[i].size(); j++) {
             outf << (j == 0 ? "" : ",") << out[i][j];
         }
         outf << '\n';
@@ -206,16 +216,25 @@ int main(int argc, char** argv) {
     if (argc == 1) {
 
     } else if (argc == 3) {
-        int input[INPUT_SIZE][INPUT_SIZE];
+        vector<vector<int> > input;
         read_from_file(input, argv[1]);
 
-        int output[INPUT_SIZE*2][INPUT_SIZE*2];
+        vector<vector<int> > output;
+        output.resize(input.size() * 2);
+        for (int i = 0; i < output.size(); i++) {
+            output[i].resize(input[i/2].size() * 2);
+        }
+
         nearest_neighbor(input, output);
         output_to_file(output, (char*)"out_nn");
+
         bilinear(input, output);
         output_to_file(output, (char*)"out_bilinear");
+        
         bicubic(input, output);
         output_to_file(output, (char*)"out_bicubic");
+
+        output_to_file(output, argv[2]);
     } else {
         cerr << "Wrong number of arguments, expected 0 or 2" << endl;
         return(1);
