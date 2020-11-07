@@ -8,6 +8,8 @@
     ====================================================================
 */
 
+#define DEBUG
+
 #include <iostream>
 #include <fstream>
 #include <vector>
@@ -21,7 +23,7 @@ using namespace std;
     Creates a 2x2 matrix for every individual pixel in the original image.
 
     This implementation is O(n), where n is the number of pixels in the 
-    original image (INPUT_SIZE^2).
+    original image.
 
     @param in the input image.
     @param out the output image.
@@ -56,7 +58,7 @@ double blerp(double p00, double p10, double p01, double p11, double kx, double k
     Uses linear interpolation to calculate the output image.
 
     This implementation is O(n), where n is the number of pixels in the 
-    original image (INPUT_SIZE^2).
+    original image.
 
     @param in the input image.
     @param out the output image.
@@ -109,7 +111,7 @@ double bcerp(double p00, double p01, double p02, double p03,
     Uses cubic interpolation to calculate the output image.
 
     This implementation is O(n), where n is the number of pixels in the 
-    original image (INPUT_SIZE^2).
+    original image.
 
     @param in the input image.
     @param out the output image.
@@ -152,7 +154,6 @@ void bicubic(vector<vector<int> >& in, vector<vector<int> >& out) {
 
 /*
     Reads image information from a byte array from given file.
-    The image is expected to be of size INPUT_SIZE^2.
 
     Returns true if image was successfully read, and false otherwise.
 
@@ -214,7 +215,7 @@ bool output_to_file(vector<vector<int> >& out, char* file) {
 */
 int main(int argc, char** argv) {
     if (argc == 1) {
-
+        cout << "Running unit tests..." << endl;
     } else if (argc == 3) {
         vector<vector<int> > input;
         read_from_file(input, argv[1]);
@@ -222,9 +223,10 @@ int main(int argc, char** argv) {
         vector<vector<int> > output;
         output.resize(input.size() * 2);
         for (int i = 0; i < output.size(); i++) {
-            output[i].resize(input[i/2].size() * 2);
+            output[i].resize(input[0].size() * 2);
         }
 
+        #ifdef DEBUG
         nearest_neighbor(input, output);
         output_to_file(output, (char*)"out_nn");
 
@@ -233,7 +235,9 @@ int main(int argc, char** argv) {
         
         bicubic(input, output);
         output_to_file(output, (char*)"out_bicubic");
+        #endif
 
+        bicubic(input, output); // expected to produce best results
         output_to_file(output, argv[2]);
     } else {
         cerr << "Wrong number of arguments, expected 0 or 2" << endl;
