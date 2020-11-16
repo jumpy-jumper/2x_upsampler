@@ -8,8 +8,6 @@
     ====================================================================
 */
 
-#define DEBUG
-
 #include <iostream>
 #include <fstream>
 #include <vector>
@@ -28,7 +26,7 @@ using namespace std;
     @param in the input image.
     @param out the output image.
 */
-void nearest_neighbor(vector<vector<int> >& in, vector<vector<int> >& out) {
+void nearest_neighbor(vector<vector<int>>& in, vector<vector<int>>& out) {
     int w = in.size();
     int h = in[0].size();
     for (int i = 0; i < w; i++) {
@@ -63,7 +61,7 @@ double blerp(double p00, double p10, double p01, double p11, double kx, double k
     @param in the input image.
     @param out the output image.
 */
-void bilinear(vector<vector<int> >& in, vector<vector<int> >& out) {
+void bilinear(vector<vector<int>>& in, vector<vector<int>>& out) {
     int w = in.size();
     int h = in[0].size();
     for(int y = 0; y < w * 2; y++) {
@@ -116,7 +114,7 @@ double bcerp(double p00, double p01, double p02, double p03,
     @param in the input image.
     @param out the output image.
 */
-void bicubic(vector<vector<int> >& in, vector<vector<int> >& out) {
+void bicubic(vector<vector<int>>& in, vector<vector<int>>& out) {
     int w = in.size();
     int h = in[0].size();
     for (int y = 0; y < w * 2; y++) {
@@ -160,7 +158,7 @@ void bicubic(vector<vector<int> >& in, vector<vector<int> >& out) {
     @param dest 2D int array to copy image to.
     @param file path to file.
 */
-bool read_from_file(vector<vector<int> >& dest, char* file) {
+bool read_from_file(vector<vector<int>>& dest, char* file) {
     ifstream inf;
     inf.open(file);
 
@@ -190,7 +188,7 @@ bool read_from_file(vector<vector<int> >& dest, char* file) {
     @param out 2D int array containing image to output.
     @param file path to file.
 */
-bool output_to_file(vector<vector<int> >& out, char* file) {
+bool output_to_file(vector<vector<int>>& out, char* file) {
     ofstream outf;
     outf.open(file);
 
@@ -206,41 +204,30 @@ bool output_to_file(vector<vector<int> >& out, char* file) {
     return true;
 }
 
-/*
-    If the program is executed with no arguments, run unit tests.
+#ifndef UNIT_TEST_CPP
 
-    Otherwise if the program is executed with two arguments, read in
+/*
+    If the program is executed with two arguments, read in
     image information from argument one and output an upscaled image
     be most performant.
 */
 int main(int argc, char** argv) {
-    if (argc == 1) {
-        cout << "Running unit tests..." << endl;
-    } else if (argc == 3) {
-        vector<vector<int> > input;
+    if (argc == 3) {
+        vector<vector<int>> input;
         read_from_file(input, argv[1]);
 
-        vector<vector<int> > output;
+        vector<vector<int>> output;
         output.resize(input.size() * 2);
         for (int i = 0; i < output.size(); i++) {
             output[i].resize(input[0].size() * 2);
         }
 
-        #ifdef DEBUG
-        nearest_neighbor(input, output);
-        output_to_file(output, (char*)"out_nn");
-
-        bilinear(input, output);
-        output_to_file(output, (char*)"out_bilinear");
-        
-        bicubic(input, output);
-        output_to_file(output, (char*)"out_bicubic");
-        #endif
-
         bicubic(input, output); // expected to produce best results
         output_to_file(output, argv[2]);
     } else {
-        cerr << "Wrong number of arguments, expected 0 or 2" << endl;
+        cerr << "Wrong number of arguments, expected 2" << endl;
         return(1);
     }
 }
+
+#endif
