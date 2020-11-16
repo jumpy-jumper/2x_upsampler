@@ -15,15 +15,6 @@ coverage: unit_test.cpp upsample.cpp
 	rm *gcda
 	rm *info
 	rm main
-diff:
-	./main ../test_cases/sample1_input.dat sample1_output.dat
-	../diff/diff ../test_cases/sample1_original.dat out_nn
-	../diff/diff ../test_cases/sample1_original.dat out_bilinear
-	../diff/diff ../test_cases/sample1_original.dat out_bicubic
-	./main ../test_cases/sample2_input.dat sample2_output.dat
-	../diff/diff ../test_cases/sample2_original.dat out_nn
-	../diff/diff ../test_cases/sample2_original.dat out_bilinear
-	../diff/diff ../test_cases/sample2_original.dat out_bicubic
 clean:
 	rm -f *.dat
 	rm -f out_*

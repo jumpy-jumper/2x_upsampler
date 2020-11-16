@@ -1,3 +1,15 @@
+/*
+    ====================================================================
+    Code by Julio Sarda-Perez for COP4531 at Florida State University.
+    Professor: Piyush Kumar.
+
+    This file uses gtest to unit-test the upsample.cpp file.
+    The tests involve using randomized images to test the various
+    functions of the upsample.cpp file.
+    ====================================================================
+*/
+
+
 #define UNIT_TEST_CPP
 #include "gtest/gtest.h"
 #include <vector>
