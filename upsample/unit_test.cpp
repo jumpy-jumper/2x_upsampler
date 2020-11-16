@@ -21,6 +21,24 @@ void randomize_image(vector<vector<int>>& img) {
     }
 }
 
+bool identical_images(vector<vector<int>>& img1, vector<vector<int>>& img2) {
+    if (img1.size() != img2.size()) {
+        return false;
+    } else if (img1[0].size() != img2[0].size()) {
+        return false;
+    } else {
+        for (int y = 0; y < img1.size(); y++) {
+            for (int x = 0; x < img1[0].size(); x++) {
+                if (img1[y][x] != img2[y][x]) {
+                    return false;
+                }
+            }
+        }
+    }
+
+    return true;
+}
+
 TEST(NearestNeighborTest,RandomImageTest) {
     int height = rand() % 500 + 500;
     int width = rand() % 500 + 500;
@@ -51,7 +69,22 @@ TEST(BicubicTest,RandomImageTest) {
     bicubic(in, out);
 }
 
+TEST(FileIOTest,RandomImageTest) {
+    int height = rand() % 500 + 500;
+    int width = rand() % 500 + 500;
+    vector<vector<int>> img = empty_image(height, width);
+    randomize_image(img);
+
+    output_to_file(img, (char*)"test.dat");
+    vector<vector<int>> img2;
+    read_from_file(img2, (char*)"test.dat");
+    remove("test.dat");
+
+    EXPECT_TRUE(identical_images(img, img2));
+}
+
 int main(int argc,char**argv) {
+    srand(time(NULL));
     testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
 }
